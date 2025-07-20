@@ -105,11 +105,11 @@ def fetch_json(
     headers = headers or {}
     timeout = timeout or DEFAULT_TIMEOUT
 
-    logger.info("[FAIF] GET %s", url)
+    logger.info("[FAIFApi] GET %s", url)
     try:
         resp = requests.get(url, headers=headers, timeout=timeout)
     except requests.RequestException as e:  # tipo Timeout, ConnectionError
-        logger.exception("[FAIF] Erro de conexão com %s", url)
+        logger.exception("[FAIFApi] Erro de conexão com %s", url)
         raise ConnectionErrorUpstream("Erro de conexão com serviço externo.", details=str(e)) from e
 
     # para 404:
@@ -128,7 +128,7 @@ def fetch_json(
     try:
         return resp.json()
     except ValueError as e:  # JSON inválido
-        logger.exception("[FAIF] JSON inválido de %s", url)
+        logger.exception("[FAIFApi] JSON inválido de %s", url)
         raise InvalidJSON(upstream_status=resp.status_code, details=str(e)) from e
 
 
@@ -226,13 +226,13 @@ def buscar_servidores(nome):
 
 @app.errorhandler(err)
 def handle_faif_error(exc: err):  # type: ignore[override]
-    logger.warning("[FAIF] %s", exc)
+    logger.warning("[FAIFApi] %s", exc)
     return error_response_from_exception(exc)
 
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(exc: Exception):  # type: ignore[override]
-    logger.exception("[FAIF] Erro inesperado: %s", exc)
+    logger.exception("[FAIFApi] Erro inesperado: %s", exc)
     fallback = err("Erro interno do servidor.")
     return error_response_from_exception(fallback)
 
