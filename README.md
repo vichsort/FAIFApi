@@ -2,7 +2,7 @@
 FAIF ou Facilitador de Acesso à Informação Federal é um projeto desenvolvido pelos alunos do Instituto Federal Catarinense que serve como intermediário entre oito APIs governamentais diretamente proporcionadas pelo sistema federal e uma aplicação que serve como ferramenta para aumentar o intelecto e consciência política. 
 
 ## Como começar?
-Primeiramente, acesse a pasta 'back-end' e no terminal digite
+Em seu terminal, digite:
 ```bash
     pip install -r requirements.txt
     python app.py
@@ -77,10 +77,7 @@ A API de código aberto do FAIF é desenvolvida e esquematizada para simplificar
             },
             "type": "Point"
         },
-        "neighborhood": "Centro",
-        "service": "open-cep",
-        "state": "SC",
-        "street": "Avenida Getúlio Dorneles Vargas - N"
+        ...
     },
     "ok": true
 }
@@ -102,48 +99,7 @@ A API de código aberto do FAIF é desenvolvida e esquematizada para simplificar
                 "descricao": ""
             }
         ],
-        "cnpj": "82951229000176",
-        "codigo_municipio": 8105,
-        "codigo_municipio_ibge": 4205407,
-        "codigo_natureza_juridica": 1236,
-        "codigo_pais": null,
-        "codigo_porte": 5,
-        "complemento": "KM 5",
-        "data_exclusao_do_mei": null,
-        "data_exclusao_do_simples": null,
-        "data_inicio_atividade": "1974-12-13",
-        "data_opcao_pelo_mei": null,
-        "data_opcao_pelo_simples": null,
-        "data_situacao_cadastral": "2005-11-03",
-        "data_situacao_especial": null,
-        "ddd_fax": "4836652120",
-        "ddd_telefone_1": "4836652149",
-        "ddd_telefone_2": "",
-        "descricao_identificador_matriz_filial": "MATRIZ",
-        "descricao_motivo_situacao_cadastral": "SEM MOTIVO",
-        "descricao_situacao_cadastral": "ATIVA",
-        "descricao_tipo_de_logradouro": "RODOVIA",
-        "email": null,
-        "ente_federativo_responsavel": "SANTA CATARINA",
-        "identificador_matriz_filial": 1,
-        "logradouro": "SC 401",
-        "motivo_situacao_cadastral": 0,
-        "municipio": "FLORIANOPOLIS",
-        "natureza_juridica": "Estado ou Distrito Federal",
-        "nome_cidade_no_exterior": "",
-        "nome_fantasia": "ESTADO DE SANTA CATARINA",
-        "numero": "4600",
-        "opcao_pelo_mei": null,
-        "opcao_pelo_simples": null,
-        "pais": null,
-        "porte": "DEMAIS",
-        "qsa": null,
-        "qualificacao_do_responsavel": 5,
-        "razao_social": "ESTADO DE SANTA CATARINA",
-        "regime_tributario": null,
-        "situacao_cadastral": 2,
-        "situacao_especial": "",
-        "uf": "SC"
+        ...
     },
     "ok": true
 }
