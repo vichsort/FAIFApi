@@ -149,6 +149,36 @@ A API de código aberto do FAIF é desenvolvida e esquematizada para simplificar
 }
 ```
 
+#### Portal da transparência
+/faif/portal-transparencia/pessoa-fisica/cpf&nis
+```json
+{
+  "ok": true,
+  "data": {
+    "cpf": "12345678900",
+    "nome": "Fulano da Silva",
+    "nis": "12345678901",
+    "favorecidoDespesas": true,
+    "servidor": false,
+    ...
+  }
+}
+```
+
+/faif/portal-transparencia/pessoa-juridica/cnpj
+
+```json
+{
+  "ok": true,
+  "data": {
+    "cnpj": "12345678000199",
+    "razaoSocial": "Empresa X Ltda",
+    "nomeFantasia": "Empresa X",
+    "favorecidoDespesas": true,
+    ...
+  }
+}
+```
 
 ---
 
