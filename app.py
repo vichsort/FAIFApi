@@ -203,6 +203,34 @@ def buscar_servidores():
         )
 
     return success_response(servidores)
+
+@app.route("/faif/cgu")
+def listar_cgu():
+    url = "https://dados.gov.br/dados/api/publico/conjuntos-dados/"
+    dados = fetch_json(
+        url,
+        headers={"Accept": "application/json"},
+        not_found_message="Nenhum conjunto de dados encontrado.",
+        not_found_error_code="DADOS_NOT_FOUND",
+    )
+    return success_response(dados)
+
+
+@app.route("/faif/cgu/<id>")
+def detalhar_cgu(id: str):
+    """
+    Retorna detalhes de um conjunto de dados específico.
+    """
+    url = f"https://dados.gov.br/dados/api/publico/conjuntos-dados/{id}"
+    dados = fetch_json(
+        url,
+        headers={"Accept": "application/json"},
+        not_found_message="Conjunto de dados não encontrado.",
+        not_found_error_code="DADOS_ID_NOT_FOUND",
+    )
+    return success_response(dados)
+
+
 # ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
