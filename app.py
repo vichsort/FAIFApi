@@ -1,9 +1,10 @@
 import os
-import logging
-from typing import Any, Dict, Optional
-import requests
-from flask import Flask, jsonify, request
+from typing import Dict, Optional
+from flask import Flask, request
 from flask_cors import CORS
+from exceptions import err, ErrorNotFound
+from fetch import fetch_json, logger
+from helpers import sanitize_digits, success_response, error_response_from_exception
 
 # ---------------------------------------------------------------------------
 # Configuração básica
@@ -12,114 +13,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Tokens vindos do ambiente (.env / variáveis de ambiente)
-token_cofiex = os.getenv("TOKEN_COFIEX")
-token_cgu = os.getenv("TOKEN_CGU")  # carregado logo no início
-
 TOKEN_PORTAL = os.getenv("TOKEN_PORTAL", "d1b5fac8951a331b63047753f1eaa2fb")
 
-# Timeout padrão para chamadas externas (segundos)
-DEFAULT_TIMEOUT = int(os.getenv("FAIF_HTTP_TIMEOUT", "10"))
-
-# ---------------------------------------------------------------------------
-# Exceções customizadas
-# ---------------------------------------------------------------------------
-
-class err(Exception):
-    def __init__(
-        self,
-        message: str,
-        *,
-        status_code: int = 500,
-        error_code: str = "INTERNAL_ERROR",
-        details: Optional[Any] = None
-    ) -> None:
-        super().__init__(message)
-        self.message = message
-        self.status_code = status_code
-        self.error_code = error_code
-        self.details = details
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "ok": False,
-            "error": {
-                "code": self.error_code,
-                "message": self.message,
-                "details": self.details,
-            },
-        }
-
-class ErrorNotFound(err):
-    def __init__(self, message: str, *, error_code: str = "NOT_FOUND", details: Optional[str] = None, upstream_status: Optional[int] = 404) -> None:
-        super().__init__(message, status_code=404, error_code=error_code, details=details)
-
-class ConnectionErrorUpstream(err):
-    def __init__(self, message: str, *, details: Optional[str] = None) -> None:
-        super().__init__(message, status_code=502, error_code="UPSTREAM_CONNECTION_ERROR", details=details)
-
-class ErrorUpstream(err):
-    def __init__(self, message: str, *, upstream_status: int, details: Optional[str] = None, error_code: str = "UPSTREAM_ERROR") -> None:
-        super().__init__(message, status_code=502, error_code=error_code, details=details)
-
-class InvalidJSON(err):
-    def __init__(self, message: str = "Resposta JSON inválida do serviço externo.", *, upstream_status: Optional[int] = None, details: Optional[str] = None) -> None:
-        super().__init__(message, status_code=502, error_code="INVALID_JSON", details=details)
-
-# ---------------------------------------------------------------------------
-# Helpers e Respostas
-# ---------------------------------------------------------------------------
-
-def sanitize_digits(value: str) -> str:
-    return ''.join(filter(str.isdigit, value))
-
-def success_response(data: Any, status_code: int = 200):
-    return jsonify({"ok": True, "data": data}), status_code
-
-def error_response_from_exception(exc: err):
-    return jsonify(exc.to_dict()), exc.status_code
-
-# ---------------------------------------------------------------------------
-# Centro das requisições
-# ---------------------------------------------------------------------------
-
-def fetch_json(
-    url: str,
-    *,
-    headers: Optional[Dict[str, str]] = None,
-    params: Optional[Dict[str, str]] = None,
-    timeout: Optional[int] = None,
-    not_found_message: str = "Recurso não encontrado.",
-    not_found_error_code: str = "NOT_FOUND",
-) -> Any:
-    headers = headers or {}
-    timeout = timeout or DEFAULT_TIMEOUT
-
-    logger.info("[FAIFApi] GET %s params=%s", url, params)
-    try:
-        resp = requests.get(url, headers=headers, params=params, timeout=timeout)
-    except requests.RequestException as e:
-        logger.exception("[FAIFApi] Erro de conexão com %s", url)
-        raise ConnectionErrorUpstream("Erro de conexão com serviço externo.", details=str(e)) from e
-
-    if resp.status_code == 404:
-        raise ErrorNotFound(not_found_message, error_code=not_found_error_code, details=resp.text[:500])
-
-    if not resp.ok:
-        raise ErrorUpstream(
-            "Erro ao consultar serviço externo.",
-            upstream_status=resp.status_code,
-            details=resp.text[:500],
-        )
-
-    try:
-        return resp.json()
-    except ValueError as e:
-        logger.exception("[FAIFApi] JSON inválido de %s", url)
-        raise InvalidJSON(details=str(e)) from e
 
 # ---------------------------------------------------------------------------
 # Rotas / Endpoints
