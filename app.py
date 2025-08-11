@@ -1,8 +1,9 @@
 import os
 from typing import Dict, Optional
-from flask import Flask, request
+from flask import Flask, request, jsonify
+from werkzeug.exceptions import NotFound as HTTPNotFound
 from flask_cors import CORS
-from exceptions import err, ErrorNotFound
+from exceptions import err, ErrorNotFound, InvalidJSON, ErrorUpstream, ConnectionErrorUpstream
 from fetch import fetch_json, logger
 from helpers import sanitize_digits, success_response, error_response_from_exception
 
@@ -30,21 +31,102 @@ def buscar_deputados(deputado: str):
         not_found_error_code="DEPUTADO_NOT_FOUND",
     )
     lista = dados.get("dados", []) if isinstance(dados, dict) else dados
-    return success_response(lista)
+    # Normaliza campos esperados pelo app Flutter
+    normalizado = []
+    if isinstance(lista, list):
+        for d in lista:
+            if isinstance(d, dict):
+                normalizado.append(
+                    {
+                        "nome": d.get("nome"),
+                        "email": d.get("email") or "",
+                        "id": d.get("id"),
+                        "siglaPartido": d.get("siglaPartido"),
+                        "siglaUf": d.get("siglaUf"),
+                        "urlFoto": d.get("urlFoto"),
+                    }
+                )
+    # Flutter espera lista crua
+    return jsonify(normalizado)
 
 @app.route("/faif/cep/<cep>")
 def consultar_cep(cep: str):
     digits = sanitize_digits(cep)
     url = f"https://brasilapi.com.br/api/cep/v2/{digits}"
     dados = fetch_json(url, not_found_message="CEP não encontrado.", not_found_error_code="CEP_NOT_FOUND")
-    return success_response(dados)
+    return jsonify(dados)
 
-@app.route("/faif/cnpj/<cnpj>")
+@app.route("/faif/cnpj/<path:cnpj>")
+@app.route("/cnpj/<path:cnpj>")
 def consultar_cnpj(cnpj: str):
     digits = sanitize_digits(cnpj)
     url = f"https://brasilapi.com.br/api/cnpj/v1/{digits}"
-    dados = fetch_json(url, not_found_message="CNPJ não encontrado.", not_found_error_code="CNPJ_NOT_FOUND")
-    return success_response(dados)
+    dados = fetch_json(
+        url,
+        not_found_message="CNPJ não encontrado.",
+        not_found_error_code="CNPJ_NOT_FOUND",
+    )
+
+    # Mapear BrasilAPI -> estrutura esperada pelo app Flutter
+    principal_code = dados.get("cnae_fiscal")
+    principal_desc = dados.get("cnae_fiscal_descricao") or ""
+    atividades_secundarias_brasilapi = dados.get("cnaes_secundarios") or []
+
+    atividades_principal = []
+    if principal_code or principal_desc:
+        atividades_principal.append(
+            {
+                "code": str(principal_code) if principal_code is not None else "",
+                "text": principal_desc or "",
+            }
+        )
+
+    atividades_secundarias = []
+    for item in atividades_secundarias_brasilapi:
+        atividades_secundarias.append(
+            {
+                "code": str(item.get("codigo") or ""),
+                "text": item.get("descricao") or "",
+            }
+        )
+
+    qsa_brasilapi = dados.get("qsa") or []
+    qsa = []
+    for s in qsa_brasilapi:
+        qsa.append(
+            {
+                "qual": s.get("qualificacao_socio") or s.get("qualificacao") or "",
+                "nome": s.get("nome_socio") or s.get("nome") or "",
+            }
+        )
+
+    mapped = {
+        "cnpj": digits,
+        "nome": dados.get("razao_social") or dados.get("nome") or "",
+        "fantasia": dados.get("nome_fantasia") or dados.get("fantasia") or "",
+        "natureza_juridica": dados.get("natureza_juridica") or "",
+        "porte": dados.get("descricao_porte") or dados.get("porte") or "",
+        "abertura": dados.get("data_inicio_atividade") or dados.get("abertura") or "",
+        "atividade_principal": atividades_principal,
+        "atividades_secundarias": atividades_secundarias,
+        "logradouro": dados.get("logradouro") or "",
+        "numero": dados.get("numero") or "",
+        "complemento": dados.get("complemento") or "",
+        "bairro": dados.get("bairro") or "",
+        "municipio": dados.get("municipio") or "",
+        "uf": dados.get("uf") or "",
+        "cep": dados.get("cep") or "",
+        "situacao": dados.get("descricao_situacao_cadastral") or dados.get("situacao") or "",
+        "data_situacao": dados.get("data_situacao_cadastral") or dados.get("data_situacao") or "",
+        "capital_social": dados.get("capital_social") or "",
+        "motivo_situacao": dados.get("descricao_motivo_situacao_cadastral") or dados.get("motivo_situacao") or "",
+        "situacao_especial": dados.get("situacao_especial") or "",
+        "data_situacao_especial": dados.get("data_situacao_especial") or "",
+        "qsa": qsa,
+    }
+
+    # Flutter espera objeto cru (sem wrapper ok/data)
+    return jsonify(mapped)
 
 @app.route("/faif/servicos/orgao/<cod>")
 def consultar_servicos_orgao(cod: str):
@@ -62,18 +144,18 @@ def consultar_servicos_servico(cod: str):
 def buscar_pessoa_juridica(cnpj: str):
     cnpj = sanitize_digits(cnpj)
     url = f"https://api.portaldatransparencia.gov.br/api-de-dados/pessoa-juridica?cnpj={cnpj}"
-    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL}
+    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL, "User-Agent": "FAIFApi/1.0"}
     dados = fetch_json(url, headers=headers, not_found_message="Pessoa jurídica não encontrada.", not_found_error_code="PESSOA_JURIDICA_NOT_FOUND")
-    return success_response(dados)
+    return jsonify(dados)
 
 @app.route("/faif/portal-transparencia/pessoa-fisica/<cpf>&<nis>")
 def buscar_pessoa_fisica(cpf: str, nis: str):
     cpf = sanitize_digits(cpf)
     nis = sanitize_digits(nis)
     url = f"https://api.portaldatransparencia.gov.br/api-de-dados/pessoa-fisica?cpf={cpf}&nis={nis}"
-    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL}
+    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL, "User-Agent": "FAIFApi/1.0"}
     dados = fetch_json(url, headers=headers, not_found_message="Pessoa física não encontrada.", not_found_error_code="PESSOA_FISICA_NOT_FOUND")
-    return success_response(dados)
+    return jsonify(dados)
 
 @app.route("/faif/portal-transparencia/emendas/<page>")
 def buscar_emendas_parlamentares(page: str):
@@ -118,20 +200,28 @@ def buscar_emendas_parlamentares(page: str):
             )
         params["ano"] = ano_raw
 
+    # Normaliza nomeAutor para MAIÚSCULAS (API externa parece sensível a caixa)
+    if "nomeAutor" in params and isinstance(params["nomeAutor"], str):
+        params["nomeAutor"] = params["nomeAutor"].upper()
+
     url = "https://api.portaldatransparencia.gov.br/api-de-dados/emendas"
-    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL}
+    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL, "User-Agent": "FAIFApi/1.0"}
 
     logger.info("[FAIFApi] Emendas params=%s", params)
 
-    dados = fetch_json(
-        url,
-        headers=headers,
-        params=params,
-        not_found_message="Nenhuma emenda encontrada.",
-        not_found_error_code="EMENDA_NOT_FOUND",
-    )
-
-    return success_response(dados)
+    try:
+        dados = fetch_json(
+            url,
+            headers=headers,
+            params=params,
+            not_found_message="Nenhuma emenda encontrada.",
+            not_found_error_code="EMENDA_NOT_FOUND",
+        )
+        return jsonify(dados)
+    except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound) as e:
+        logger.warning("[FAIFApi] Falha ao obter emendas (page=%s, params=%s): %s", page, params, e)
+        # Fallback: resposta vazia (200) para o app lidar como 'nenhuma encontrada'
+        return jsonify([])
 
 # SERVIDORES (Portal da Transparência) --------------------------------------
 @app.route("/faif/servidores")
@@ -206,14 +296,96 @@ def buscar_servidores():
 
 @app.route("/faif/cgu")
 def listar_cgu():
-    url = "https://dados.gov.br/dados/api/publico/conjuntos-dados/"
-    dados = fetch_json(
-        url,
-        headers={"Accept": "application/json"},
-        not_found_message="Nenhum conjunto de dados encontrado.",
-        not_found_error_code="DADOS_NOT_FOUND",
-    )
-    return success_response(dados)
+    # Busca principal via CKAN. Se falhar ou vier vazio, faz fallback para o endpoint público antigo
+    termo = (request.args.get("q") or "").strip()
+
+    def _normalize_ckan_list(dados_ckan: Dict) -> list:
+        pkgs = []
+        if isinstance(dados_ckan, dict):
+            result_obj = dados_ckan.get("result")
+            if isinstance(result_obj, dict):
+                pkgs = result_obj.get("results") or []
+        itens: list = []
+        if isinstance(pkgs, list):
+            for pkg in pkgs:
+                if isinstance(pkg, dict):
+                    itens.append(
+                        {
+                            "id": str(pkg.get("id") or ""),
+                            "titulo": str(pkg.get("title") or pkg.get("name") or ""),
+                            "descricao": str(pkg.get("notes") or ""),
+                        }
+                    )
+        return itens
+
+    def _normalize_public_list(dados_pub: Dict) -> list:
+        # Normaliza lista do endpoint antigo (quando disponível)
+        raw_items = []
+        if isinstance(dados_pub, list):
+            raw_items = dados_pub
+        elif isinstance(dados_pub, dict):
+            for key in ("results", "itens", "items", "dados", "data"):
+                value = dados_pub.get(key)
+                if isinstance(value, list):
+                    raw_items = value
+                    break
+        itens: list = []
+        for it in raw_items:
+            if isinstance(it, dict):
+                id_val = it.get("id") or it.get("identificador") or it.get("url") or ""
+                titulo_val = it.get("titulo") or it.get("title") or it.get("nome") or ""
+                desc_val = it.get("descricao") or it.get("resumo") or it.get("description") or ""
+                itens.append(
+                    {
+                        "id": str(id_val) if id_val is not None else "",
+                        "titulo": str(titulo_val) if titulo_val is not None else "",
+                        "descricao": str(desc_val) if desc_val is not None else "",
+                    }
+                )
+        return itens
+
+    # 1) Tenta CKAN
+    try:
+        params: Dict[str, str] = {"rows": "100", "sort": "metadata_modified desc"}
+        # CKAN aceita curinga '*:*' para retornar resultados quando não há termo
+        params["q"] = termo if termo else "*:*"
+        dados_ckan = fetch_json(
+            "https://dados.gov.br/api/3/action/package_search",
+            headers={"Accept": "application/json", "User-Agent": "FAIFApi/1.0"},
+            params=params,
+            not_found_message="Nenhum conjunto de dados encontrado.",
+            not_found_error_code="DADOS_NOT_FOUND",
+        )
+    except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream) as e:
+        logger.warning("[FAIFApi] Falha na busca CKAN: %s", e)
+        dados_ckan = {"result": {"results": []}}
+
+    itens_norm = _normalize_ckan_list(dados_ckan)
+
+    # 2) Se vazio, tenta endpoint público e aplica filtro local
+    if not itens_norm:
+        try:
+            dados_pub = fetch_json(
+                "https://dados.gov.br/dados/api/publico/conjuntos-dados/",
+                headers={"Accept": "application/json", "User-Agent": "FAIFApi/1.0"},
+                not_found_message="Nenhum conjunto de dados encontrado.",
+                not_found_error_code="DADOS_NOT_FOUND",
+            )
+        except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream) as e:
+            logger.warning("[FAIFApi] Falha no endpoint público CGU: %s", e)
+            dados_pub = []
+
+        itens_norm = _normalize_public_list(dados_pub)
+        if termo:
+            termo_l = termo.lower()
+            itens_norm = [
+                i
+                for i in itens_norm
+                if termo_l in (i.get("titulo", "").lower())
+                or termo_l in (i.get("descricao", "").lower())
+            ]
+
+    return jsonify(itens_norm)
 
 
 @app.route("/faif/cgu/<id>")
@@ -221,14 +393,21 @@ def detalhar_cgu(id: str):
     """
     Retorna detalhes de um conjunto de dados específico.
     """
-    url = f"https://dados.gov.br/dados/api/publico/conjuntos-dados/{id}"
-    dados = fetch_json(
-        url,
-        headers={"Accept": "application/json"},
-        not_found_message="Conjunto de dados não encontrado.",
-        not_found_error_code="DADOS_ID_NOT_FOUND",
-    )
-    return success_response(dados)
+    try:
+        dados = fetch_json(
+            "https://dados.gov.br/api/3/action/package_show",
+            headers={"Accept": "application/json"},
+            params={"id": id},
+            not_found_message="Conjunto de dados não encontrado.",
+            not_found_error_code="DADOS_ID_NOT_FOUND",
+        )
+    except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream) as e:
+        logger.warning("[FAIFApi] Falha ao detalhar pacote CKAN id=%s: %s", id, e)
+        raise ErrorNotFound("Conjunto de dados não encontrado.", error_code="DADOS_ID_NOT_FOUND")
+
+    if isinstance(dados, dict) and isinstance(dados.get("result"), dict):
+        return jsonify(dados["result"])
+    return jsonify(dados)
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +418,15 @@ def detalhar_cgu(id: str):
 def handle_faif_error(exc: err):
     logger.warning("[FAIFApi] %s", exc)
     return error_response_from_exception(exc)
+
+@app.errorhandler(HTTPNotFound)
+def handle_404_error(exc: HTTPNotFound):
+    not_found = ErrorNotFound(
+        "Rota não encontrada.",
+        error_code="ROUTE_NOT_FOUND",
+        details=str(exc),
+    )
+    return error_response_from_exception(not_found)
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(exc: Exception):
