@@ -1,3 +1,4 @@
+# app.py
 import os
 from typing import Dict, Optional
 from flask import Flask, request, jsonify
@@ -5,7 +6,11 @@ from werkzeug.exceptions import NotFound as HTTPNotFound
 from flask_cors import CORS
 from exceptions import err, ErrorNotFound, InvalidJSON, ErrorUpstream, ConnectionErrorUpstream
 from fetch import fetch_json, logger
+from db import init_db
 from helpers import sanitize_digits, success_response, error_response_from_exception
+from history import listar_historico
+from health import init_health
+from request_logger import init_request_logging
 
 # ---------------------------------------------------------------------------
 # Configuração básica
@@ -13,6 +18,10 @@ from helpers import sanitize_digits, success_response, error_response_from_excep
 
 app = Flask(__name__)
 CORS(app)
+
+init_db()
+init_request_logging(app)
+init_health(app)
 
 TOKEN_PORTAL = os.getenv("TOKEN_PORTAL", "d1b5fac8951a331b63047753f1eaa2fb")
 
@@ -23,6 +32,18 @@ TOKEN_PORTAL = os.getenv("TOKEN_PORTAL", "d1b5fac8951a331b63047753f1eaa2fb")
 
 @app.route("/faif/deputados/<deputado>")
 def buscar_deputados(deputado: str):
+    """
+    Busca deputados pela API da Câmara e normaliza os campos esperados pelo app.
+
+    Uso:
+        /faif/deputados/<nome>
+
+    Parâmetros:
+        deputado (path) - parte do nome do deputado a pesquisar.
+
+    Retorno:
+        Lista crua de objetos com campos: nome, email, id, siglaPartido, siglaUf, urlFoto
+    """
     url = f"https://dadosabertos.camara.leg.br/api/v2/deputados?nome={deputado}"
     dados = fetch_json(
         url,
@@ -31,7 +52,7 @@ def buscar_deputados(deputado: str):
         not_found_error_code="DEPUTADO_NOT_FOUND",
     )
     lista = dados.get("dados", []) if isinstance(dados, dict) else dados
-    # Normaliza campos esperados pelo app Flutter
+
     normalizado = []
     if isinstance(lista, list):
         for d in lista:
@@ -46,19 +67,71 @@ def buscar_deputados(deputado: str):
                         "urlFoto": d.get("urlFoto"),
                     }
                 )
-    # Flutter espera lista crua
+
     return jsonify(normalizado)
+
 
 @app.route("/faif/cep/<cep>")
 def consultar_cep(cep: str):
+    """
+    Consulta endereço por CEP via BrasilAPI e retorna o objeto encontrado.
+
+    Uso:
+        /faif/cep/<cep>
+
+    Parâmetros:
+        cep (path) - CEP a ser consultado (pode vir com ou sem máscara).
+
+    Retorno:
+        Objeto JSON com os dados do endereço.
+    """
     digits = sanitize_digits(cep)
     url = f"https://brasilapi.com.br/api/cep/v2/{digits}"
     dados = fetch_json(url, not_found_message="CEP não encontrado.", not_found_error_code="CEP_NOT_FOUND")
     return jsonify(dados)
 
-@app.route("/faif/cnpj/<path:cnpj>")
-@app.route("/cnpj/<path:cnpj>")
+
+@app.route("/faif/cpf/<cpf>&<nis>")
+def buscar_pessoa_fisica(cpf: str, nis: str):
+    """
+    Consulta pessoa física no Portal da Transparência usando CPF e NIS.
+
+    Uso:
+        /faif/cpf/<cpf>&<nis>
+
+    Parâmetros:
+        cpf (path) - CPF (apenas dígitos ou formatado).
+        nis (path) - NIS (apenas dígitos ou formatado).
+
+    Retorno:
+        Objeto JSON retornado pelo Portal da Transparência para pessoa física.
+    """
+    cpf = sanitize_digits(cpf)
+    nis = sanitize_digits(nis)
+    url = f"https://api.portaldatransparencia.gov.br/api-de-dados/pessoa-fisica?cpf={cpf}&nis={nis}"
+    headers = {
+        "Accept": "application/json",
+        "chave-api-dados": TOKEN_PORTAL,
+        "User-Agent": "FAIFApi/1.0"
+    }
+    dados = fetch_json(url, headers=headers, not_found_message="Pessoa física não encontrada.", not_found_error_code="PESSOA_FISICA_NOT_FOUND")
+    return jsonify(dados)
+
+
+@app.route("/faif/cnpj/<cnpj>")
 def consultar_cnpj(cnpj: str):
+    """
+    Consulta CNPJ via BrasilAPI e mapeia para a estrutura esperada pelo app.
+
+    Uso:
+        /faif/cnpj/<cnpj>
+
+    Parâmetros:
+        cnpj (path) - CNPJ (apenas dígitos ou formatado).
+
+    Retorno:
+        Objeto JSON mapeado com campos relevantes (nome, fantasia, atividades, qsa, endereço, etc).
+    """
     digits = sanitize_digits(cnpj)
     url = f"https://brasilapi.com.br/api/cnpj/v1/{digits}"
     dados = fetch_json(
@@ -67,7 +140,6 @@ def consultar_cnpj(cnpj: str):
         not_found_error_code="CNPJ_NOT_FOUND",
     )
 
-    # Mapear BrasilAPI -> estrutura esperada pelo app Flutter
     principal_code = dados.get("cnae_fiscal")
     principal_desc = dados.get("cnae_fiscal_descricao") or ""
     atividades_secundarias_brasilapi = dados.get("cnaes_secundarios") or []
@@ -121,58 +193,85 @@ def consultar_cnpj(cnpj: str):
         "capital_social": dados.get("capital_social") or "",
         "motivo_situacao": dados.get("descricao_motivo_situacao_cadastral") or dados.get("motivo_situacao") or "",
         "situacao_especial": dados.get("situacao_especial") or "",
-        "data_situacao_especial": dados.get("data_situacao_especial") or "",
+        "data_situacao_especial": dados.get("data_situacao_especial") or dados.get("data_situacao_especial") or "",
         "qsa": qsa,
     }
 
-    # Flutter espera objeto cru (sem wrapper ok/data)
     return jsonify(mapped)
+
+
+# SERVIÇOS ------------------------------------------------------
 
 @app.route("/faif/servicos/orgao/<cod>")
 def consultar_servicos_orgao(cod: str):
+    """
+    Consulta dados de um órgão via API de serviços do governo.
+
+    Uso:
+        /faif/servicos/orgao/<cod>
+
+    Parâmetros:
+        cod (path) - código do órgão (SIORG).
+
+    Retorno:
+        success_response contendo os dados do órgão.
+    """
     url = f"https://www.servicos.gov.br/api/v1/orgao/{cod}"
     dados = fetch_json(url, not_found_message="Código SIORG não encontrado.", not_found_error_code="SIORG_NOT_FOUND")
     return success_response(dados)
 
+
 @app.route("/faif/servicos/servico/<cod>")
 def consultar_servicos_servico(cod: str):
+    """
+    Consulta dados de um serviço via API de serviços do governo.
+
+    Uso:
+        /faif/servicos/servico/<cod>
+
+    Parâmetros:
+        cod (path) - código do serviço.
+
+    Retorno:
+        success_response contendo os dados do serviço.
+    """
     url = f"https://www.servicos.gov.br/api/v1/servicos/{cod}"
-    dados = fetch_json(url, not_found_message="Código SIORG não encontrado.", not_found_error_code="SIORG_NOT_FOUND")
+    dados = fetch_json(
+        url, not_found_message="Código SIORG não encontrado.",
+        not_found_error_code="SIORG_NOT_FOUND"
+    )
     return success_response(dados)
 
-@app.route("/faif/portal-transparencia/pessoa-juridica/<cnpj>")
-def buscar_pessoa_juridica(cnpj: str):
-    cnpj = sanitize_digits(cnpj)
-    url = f"https://api.portaldatransparencia.gov.br/api-de-dados/pessoa-juridica?cnpj={cnpj}"
-    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL, "User-Agent": "FAIFApi/1.0"}
-    dados = fetch_json(url, headers=headers, not_found_message="Pessoa jurídica não encontrada.", not_found_error_code="PESSOA_JURIDICA_NOT_FOUND")
-    return jsonify(dados)
 
-@app.route("/faif/portal-transparencia/pessoa-fisica/<cpf>&<nis>")
-def buscar_pessoa_fisica(cpf: str, nis: str):
-    cpf = sanitize_digits(cpf)
-    nis = sanitize_digits(nis)
-    url = f"https://api.portaldatransparencia.gov.br/api-de-dados/pessoa-fisica?cpf={cpf}&nis={nis}"
-    headers = {"Accept": "application/json", "chave-api-dados": TOKEN_PORTAL, "User-Agent": "FAIFApi/1.0"}
-    dados = fetch_json(url, headers=headers, not_found_message="Pessoa física não encontrada.", not_found_error_code="PESSOA_FISICA_NOT_FOUND")
-    return jsonify(dados)
+# PORTAL DA TRANSPARÊNCIA --------------------------------------
 
-@app.route("/faif/portal-transparencia/emendas/<page>")
+@app.route("/faif/transparencia/emendas/<page>")
 def buscar_emendas_parlamentares(page: str):
-    # Validar página
+    """
+    Busca emendas parlamentares no Portal da Transparência, validando o parâmetro de página.
+
+    Uso:
+        /faif/transparencia/emendas/<page>[?codigoEmenda=...&numeroEmenda=...&nomeAutor=...&ano=...&tipoEmenda=...&codigoFuncao=...&codigoSubfuncao=...]
+
+    Parâmetros:
+        page (path) - número da página (inteiro >= 1).
+        filtros via querystring - codigoEmenda, numeroEmenda, nomeAutor, ano (inteiro), tipoEmenda, codigoFuncao, codigoSubfuncao
+
+    Retorno:
+        success_response com os dados retornados pelo Portal da Transparência.
+    """
     try:
         page_num = int(page)
         if page_num < 1:
             raise ValueError
-    except ValueError:
+    except ValueError as exc:
         raise err(
             "Parâmetro 'page' deve ser inteiro >= 1.",
             status_code=400,
             error_code="INVALID_PAGE",
             details={"page": page},
-        )
+        ) from exc
 
-    # Coletar filtros opcionais
     params: Dict[str, str] = {"pagina": str(page_num)}
 
     def _get_arg_str(name: str) -> Optional[str]:
@@ -182,13 +281,11 @@ def buscar_emendas_parlamentares(page: str):
         v = v.strip()
         return v or None
 
-    # Strings diretas
     for p_name in ("codigoEmenda", "numeroEmenda", "nomeAutor", "tipoEmenda", "codigoFuncao", "codigoSubfuncao"):
         v = _get_arg_str(p_name)
         if v is not None:
             params[p_name] = v
 
-    # Ano precisa ser inteiro (positivo)
     ano_raw = _get_arg_str("ano")
     if ano_raw is not None:
         if not ano_raw.isdigit():
@@ -200,7 +297,6 @@ def buscar_emendas_parlamentares(page: str):
             )
         params["ano"] = ano_raw
 
-    # Normaliza nomeAutor para MAIÚSCULAS (API externa parece sensível a caixa)
     if "nomeAutor" in params and isinstance(params["nomeAutor"], str):
         params["nomeAutor"] = params["nomeAutor"].upper()
 
@@ -217,28 +313,31 @@ def buscar_emendas_parlamentares(page: str):
             not_found_message="Nenhuma emenda encontrada.",
             not_found_error_code="EMENDA_NOT_FOUND",
         )
-        return jsonify(dados)
+        return success_response(dados)
     except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound) as e:
         logger.warning("[FAIFApi] Falha ao obter emendas (page=%s, params=%s): %s", page, params, e)
-        # Fallback: resposta vazia (200) para o app lidar como 'nenhuma encontrada'
-        return jsonify([])
+        raise ErrorNotFound(
+            "Nenhuma emenda encontrada.",
+            error_code="EMENDA_NOT_FOUND",
+            details={"page": page, "params": params}
+        )
 
-# SERVIDORES (Portal da Transparência) --------------------------------------
-@app.route("/faif/servidores")
+
+@app.route("/faif/transparencia/servidores")
 def buscar_servidores():
     """
     Busca pessoas físicas no Portal da Transparência e filtra aquelas cujo campo
     ``vinculo`` contenha a palavra "Servidor".
 
     Uso:
-        /faif/servidores?nome=Silva[&pagina=1]
+        /faif/transparencia/servidores?nome=Silva[&pagina=1]
 
     Parâmetros:
-        nome   (obrigatório) - parte do nome a pesquisar.
-        pagina (opcional, default=1) - número da página na API externa.
+        nome   (query, obrigatório) - parte do nome a pesquisar.
+        pagina (query, opcional) - número da página na API externa.
 
     Retorno:
-        {"ok": true, "data": [...lista de servidores...]}
+        success_response com a lista de servidores encontrados.
     """
     nome = request.args.get("nome", "").strip()
     if not nome:
@@ -275,7 +374,6 @@ def buscar_servidores():
         not_found_error_code="PESSOA_FISICA_NOT_FOUND",
     )
 
-    # O endpoint retorna lista (mesmo quando vazia). Vamos filtrar por 'Servidor'.
     servidores = []
     if isinstance(dados, list):
         for p in dados:
@@ -285,7 +383,6 @@ def buscar_servidores():
                     servidores.append(p)
 
     if not servidores:
-        # Lança 404 padronizado
         raise ErrorNotFound(
             "Nenhum servidor encontrado para este nome.",
             error_code="SERVIDOR_NOT_FOUND",
@@ -294,9 +391,21 @@ def buscar_servidores():
 
     return success_response(servidores)
 
+
 @app.route("/faif/cgu")
 def listar_cgu():
-    # Busca principal via CKAN. Se falhar ou vier vazio, faz fallback para o endpoint público antigo
+    """
+    Lista conjuntos de dados (CKAN + fallback público) e aplica filtro local pelo termo.
+
+    Uso:
+        /faif/cgu[?q=termo]
+
+    Parâmetros:
+        q (query, opcional) - termo para filtrar título/descrição.
+
+    Retorno:
+        Lista de conjuntos de dados normalizados.
+    """
     termo = (request.args.get("q") or "").strip()
 
     def _normalize_ckan_list(dados_ckan: Dict) -> list:
@@ -319,7 +428,6 @@ def listar_cgu():
         return itens
 
     def _normalize_public_list(dados_pub: Dict) -> list:
-        # Normaliza lista do endpoint antigo (quando disponível)
         raw_items = []
         if isinstance(dados_pub, list):
             raw_items = dados_pub
@@ -344,10 +452,8 @@ def listar_cgu():
                 )
         return itens
 
-    # 1) Tenta CKAN
     try:
         params: Dict[str, str] = {"rows": "100", "sort": "metadata_modified desc"}
-        # CKAN aceita curinga '*:*' para retornar resultados quando não há termo
         params["q"] = termo if termo else "*:*"
         dados_ckan = fetch_json(
             "https://dados.gov.br/api/3/action/package_search",
@@ -362,7 +468,6 @@ def listar_cgu():
 
     itens_norm = _normalize_ckan_list(dados_ckan)
 
-    # 2) Se vazio, tenta endpoint público e aplica filtro local
     if not itens_norm:
         try:
             dados_pub = fetch_json(
@@ -391,7 +496,16 @@ def listar_cgu():
 @app.route("/faif/cgu/<id>")
 def detalhar_cgu(id: str):
     """
-    Retorna detalhes de um conjunto de dados específico.
+    Retorna detalhes de um conjunto de dados específico (CKAN/package_show).
+
+    Uso:
+        /faif/cgu/<id>
+
+    Parâmetros:
+        id (path) - identificador do conjunto de dados.
+
+    Retorno:
+        Objeto JSON com os detalhes do conjunto de dados.
     """
     try:
         dados = fetch_json(
@@ -411,6 +525,29 @@ def detalhar_cgu(id: str):
 
 
 # ---------------------------------------------------------------------------
+# Endpoints utilitários (histórico)
+# ---------------------------------------------------------------------------
+
+@app.route("/faif/historico")
+def consultar_historico():
+    """
+    Retorna últimas entradas do histórico salvo no banco.
+
+    Uso:
+        /faif/historico[?limit=50]
+
+    Parâmetros:
+        limit (query, opcional) - número máximo de registros a retornar.
+
+    Retorno:
+        Lista JSON com registros do histórico (id, endpoint, parametros, ip_cliente, data_hora)
+    """
+    limite = request.args.get("limit", 50, type=int)
+    rows = listar_historico(limit=limite)
+    return jsonify(rows)
+
+
+# ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
 
@@ -418,6 +555,7 @@ def detalhar_cgu(id: str):
 def handle_faif_error(exc: err):
     logger.warning("[FAIFApi] %s", exc)
     return error_response_from_exception(exc)
+
 
 @app.errorhandler(HTTPNotFound)
 def handle_404_error(exc: HTTPNotFound):
@@ -428,11 +566,13 @@ def handle_404_error(exc: HTTPNotFound):
     )
     return error_response_from_exception(not_found)
 
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(exc: Exception):
     logger.exception("[FAIFApi] Erro inesperado: %s", exc)
     fallback = err("Erro interno do servidor.")
     return error_response_from_exception(fallback)
+
 
 # ---------------------------------------------------------------------------
 # Main
