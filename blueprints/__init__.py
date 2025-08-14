@@ -1,6 +1,6 @@
 from flask import Flask
 from . import health, deputados, cep, cnpj
-from . import emendas, servicos, servidores
+from . import emendas, servicos, servidores, ibge
 
 
 def register_blueprints(app: Flask) -> None:
@@ -14,3 +14,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(emendas.bp)  
     app.register_blueprint(servicos.bp) 
     app.register_blueprint(servidores.bp) 
+    app.register_blueprint(ibge.bp)

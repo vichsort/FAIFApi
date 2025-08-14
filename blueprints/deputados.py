@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify
 from fetch import fetch_json
 from fetch import logger
+from services.normalizers import normalize_deputados_list
 
 bp = Blueprint("deputados", __name__, url_prefix="/faif/deputados")
 
@@ -20,18 +21,6 @@ def buscar_deputados(deputado: str):
         not_found_error_code="DEPUTADO_NOT_FOUND",
     )
 
-    lista = dados.get("dados", []) if isinstance(dados, dict) else dados or []
-    normalizado = [
-        {
-            "nome": d.get("nome"),
-            "email": d.get("email") or "",
-            "id": d.get("id"),
-            "siglaPartido": d.get("siglaPartido"),
-            "siglaUf": d.get("siglaUf"),
-            "urlFoto": d.get("urlFoto"),
-        }
-        for d in lista if isinstance(d, dict)
-    ]
-
+    normalizado = normalize_deputados_list(dados)
     logger.info("[FAIFApi] buscar_deputados(%s) -> %d itens", deputado, len(normalizado))
     return jsonify(normalizado)
