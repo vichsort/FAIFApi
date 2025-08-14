@@ -117,14 +117,44 @@ def build_faif_blueprint() -> Blueprint:
         )
         return jsonify(dados)
 
+    # ------------------------ Pessoa Jurídica ------------------------
+    @bp.route("/portal-transparencia/pessoa-juridica/<cnpj>")
+    def buscar_pessoa_juridica(cnpj: str):
+        """
+        Consulta pessoa jurídica no Portal da Transparência usando CNPJ.
+
+        Uso:
+            /faif/portal-transparencia/pessoa-juridica/<cnpj>
+
+        Parâmetros:
+            cnpj (path) - CNPJ (apenas dígitos ou formatado).
+
+        Retorno:
+            Objeto JSON retornado pelo Portal da Transparência para pessoa jurídica.
+        """
+        cnpj = sanitize_digits(cnpj)
+        url = f"https://api.portaldatransparencia.gov.br/api-de-dados/pessoa-juridica?cnpj={cnpj}"
+        headers = {
+            "Accept": "application/json",
+            "chave-api-dados": current_app.config["TOKEN_PORTAL"],
+            "User-Agent": "FAIFApi/1.0",
+        }
+        dados = fetch_json(
+            url,
+            headers=headers,
+            not_found_message="Pessoa jurídica não encontrada.",
+            not_found_error_code="PESSOA_JURIDICA_NOT_FOUND",
+        )
+        return jsonify(dados)
+
     # ------------------------ CPF & NIS ------------------------
-    @bp.route("/cpf/<cpf>&<nis>")
+    @bp.route("/portal-transparencia/pessoa-fisica/<cpf>&<nis>")
     def buscar_pessoa_fisica(cpf: str, nis: str):
         """
         Consulta pessoa física no Portal da Transparência usando CPF e NIS.
 
         Uso:
-            /faif/cpf/<cpf>&<nis>
+            /faif/portal-transparencia/pessoa-fisica/<cpf>&<nis>
 
         Parâmetros:
             cpf (path) - CPF (apenas dígitos ou formatado).
@@ -150,7 +180,7 @@ def build_faif_blueprint() -> Blueprint:
         return jsonify(dados)
 
     # ------------------------ CNPJ ------------------------
-    @bp.route("/cnpj/<cnpj>")
+    @bp.route("/cnpj/<path:cnpj>")
     def consultar_cnpj(cnpj: str):
         """
         Consulta CNPJ via BrasilAPI e mapeia para a estrutura esperada pelo app.
@@ -279,7 +309,7 @@ def build_faif_blueprint() -> Blueprint:
         return success_response(dados)
 
     # ------------------------ Transparência (Emendas) ------------------------
-    @bp.route("/transparencia/emendas/<page>")
+    @bp.route("/portal-transparencia/emendas/<page>")
     def buscar_emendas_parlamentares(page: str):
         """
         Busca emendas parlamentares no Portal da Transparência, validando o parâmetro de página.
@@ -343,6 +373,7 @@ def build_faif_blueprint() -> Blueprint:
         }
 
         logger.info("[FAIFApi] Emendas params=%s", params)
+        logger.info("[FAIFApi] Token usado: %s", current_app.config["TOKEN_PORTAL"][:10] + "...")
 
         try:
             dados = fetch_json(
@@ -352,17 +383,24 @@ def build_faif_blueprint() -> Blueprint:
                 not_found_message="Nenhuma emenda encontrada.",
                 not_found_error_code="EMENDA_NOT_FOUND",
             )
-            return success_response(dados)
+            
+            # Log da resposta para debug
+            logger.info("[FAIFApi] Resposta da API externa: %s", dados)
+            
+            # Verificar se a resposta está vazia ou é uma lista vazia
+            if not dados or (isinstance(dados, list) and len(dados) == 0):
+                logger.warning("[FAIFApi] API externa retornou dados vazios para emendas")
+                return jsonify([])
+            
+            # Flutter espera dados crus, não wrapped em success_response
+            return jsonify(dados)
         except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound) as e:
             logger.warning("[FAIFApi] Falha ao obter emendas (page=%s, params=%s): %s", page, params, e)
-            raise ErrorNotFound(
-                "Nenhuma emenda encontrada.",
-                error_code="EMENDA_NOT_FOUND",
-                details={"page": page, "params": params},
-            )
+            # Retornar lista vazia em vez de erro para compatibilidade com o app
+            return jsonify([])
 
     # ------------------------ Transparência (Servidores) ------------------------
-    @bp.route("/transparencia/servidores")
+    @bp.route("/portal-transparencia/servidores")
     def buscar_servidores():
         """
         Busca pessoas físicas no Portal da Transparência e filtra aquelas cujo campo
@@ -561,6 +599,45 @@ def build_faif_blueprint() -> Blueprint:
         if isinstance(dados, dict) and isinstance(dados.get("result"), dict):
             return jsonify(dados["result"])
         return jsonify(dados)
+
+    # ------------------------ Teste Portal Transparência ------------------------
+    @bp.route("/teste-portal")
+    def teste_portal():
+        """
+        Rota de teste para verificar se a API do Portal da Transparência está funcionando.
+        """
+        url = "https://api.portaldatransparencia.gov.br/api-de-dados/emendas"
+        headers = {
+            "Accept": "application/json",
+            "chave-api-dados": current_app.config["TOKEN_PORTAL"],
+            "User-Agent": "FAIFApi/1.0",
+        }
+        params = {"pagina": "1"}
+        
+        logger.info("[FAIFApi] Teste Portal - Token: %s", current_app.config["TOKEN_PORTAL"][:10] + "...")
+        
+        try:
+            dados = fetch_json(
+                url,
+                headers=headers,
+                params=params,
+                not_found_message="Teste falhou.",
+                not_found_error_code="TESTE_FAILED",
+            )
+            logger.info("[FAIFApi] Teste Portal - Resposta: %s", dados)
+            return jsonify({
+                "status": "sucesso",
+                "token_usado": current_app.config["TOKEN_PORTAL"][:10] + "...",
+                "resposta_api": dados,
+                "tamanho_resposta": len(dados) if isinstance(dados, list) else "N/A"
+            })
+        except Exception as e:
+            logger.error("[FAIFApi] Teste Portal - Erro: %s", e)
+            return jsonify({
+                "status": "erro",
+                "erro": str(e),
+                "token_usado": current_app.config["TOKEN_PORTAL"][:10] + "..."
+            }), 500
 
     # ------------------------ Histórico utilitário ------------------------
     @bp.route("/historico")
