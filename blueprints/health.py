@@ -9,7 +9,6 @@ from flask import jsonify
 
 from db import get_connection, DB_PATH
 
-
 def init_health(app, route="/health"):
     """
     Inicializa a rota de health check.
