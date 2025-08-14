@@ -1,4 +1,3 @@
-# app.py
 import os
 from typing import Dict, Optional
 from flask import Flask, Blueprint, request, jsonify, current_app
