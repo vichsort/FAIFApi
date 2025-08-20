@@ -8,7 +8,7 @@ bp = Blueprint("ibge", __name__, url_prefix="/faif/ibge")
 @bp.route("", methods=["GET"])
 def buscar_ibge():
     """
-    Proxy para https://servicodados.ibge.gov.br/api/v2/metadados/Pesquisa?q=<termo>
+    Busca dados do IBGE com base no termo de pesquisa fornecido.
     Uso: GET /faif/ibge?q=termo
     Retorna: lista JSON (mesmo formato que o IBGE)
     """
