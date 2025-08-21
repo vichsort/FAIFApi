@@ -4,6 +4,8 @@ FAIF ou Facilitador de Acesso à Informação Federal é um projeto desenvolvido
 ## Como começar?
 Em seu terminal, digite:
 ```bash
+    python -m venv venv
+    venv\Scripts\activate
     pip install -r requirements.txt
     python app.py
 ```

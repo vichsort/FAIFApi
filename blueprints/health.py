@@ -5,9 +5,11 @@ import sys
 import platform
 import socket
 from datetime import datetime
-from flask import jsonify
+from flask import Blueprint, jsonify
 
 from db import get_connection, DB_PATH
+
+bp = Blueprint("health", __name__)
 
 def init_health(app, route="/health"):
     """
