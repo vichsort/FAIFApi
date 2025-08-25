@@ -1,4 +1,3 @@
-# blueprints/servicos.py
 from flask import Blueprint
 from fetch import fetch_json, logger
 from helpers import success_response

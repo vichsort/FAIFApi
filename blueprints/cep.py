@@ -1,4 +1,3 @@
-# blueprints/cep.py
 from flask import Blueprint, jsonify
 from fetch import fetch_json
 from helpers import sanitize_digits

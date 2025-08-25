@@ -1,4 +1,3 @@
-# blueprints/emendas.py
 from typing import Dict, Optional
 from flask import Blueprint, request, jsonify, current_app
 from fetch import fetch_json, logger

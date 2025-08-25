@@ -1,4 +1,3 @@
-# blueprints/cnpj.py
 from flask import Blueprint, jsonify
 from fetch import fetch_json, logger
 from helpers import sanitize_digits

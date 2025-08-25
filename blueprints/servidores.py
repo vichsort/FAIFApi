@@ -1,4 +1,3 @@
-# blueprints/servidores.py
 from typing import Dict
 from flask import Blueprint, request, current_app
 from fetch import fetch_json, logger

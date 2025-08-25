@@ -1,4 +1,3 @@
-# blueprints/cpf.py
 from flask import Blueprint, jsonify, current_app
 from fetch import fetch_json
 from helpers import sanitize_digits

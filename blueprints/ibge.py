@@ -1,4 +1,3 @@
-# blueprints/ibge.py
 from flask import Blueprint, request, jsonify
 from fetch import fetch_json, logger
 from exceptions import InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound

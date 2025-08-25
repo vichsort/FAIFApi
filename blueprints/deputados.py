@@ -1,4 +1,3 @@
-# blueprints/deputados.py
 from flask import Blueprint, jsonify
 from fetch import fetch_json
 from fetch import logger
