@@ -17,4 +17,5 @@ def consultar_cnpj(cnpj: str):
 
     mapped = map_cnpj_data(dados, digits=digits)
     logger.info("[FAIFApi] consultar_cnpj %s -> %s", digits, "OK" if dados else "EMPTY")
-    return jsonify(mapped)
+
+    return jsonify({"ok": True, "data": mapped})

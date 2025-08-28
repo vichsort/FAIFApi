@@ -22,4 +22,4 @@ def buscar_deputados(deputado: str):
 
     normalizado = normalize_deputados_list(dados)
     logger.info("[FAIFApi] buscar_deputados(%s) -> %d itens", deputado, len(normalizado))
-    return jsonify(normalizado)
+    return jsonify({"ok": True, "data": normalizado})

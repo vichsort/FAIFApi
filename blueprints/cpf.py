@@ -5,12 +5,11 @@ from utils.fetch import logger
 
 bp = Blueprint("cpf", __name__, url_prefix="/faif/transparencia/pessoa-fisica")
 
-
-@bp.route("/<cpf>&<nis>", methods=["GET"])
+@bp.route("/<cpf>/<nis>", methods=["GET"])
 def buscar_pessoa_fisica(cpf: str, nis: str):
     """
     Consulta pessoa física no Portal da Transparência usando CPF e NIS.
-    Uso: /faif/transparencia/pessoa-fisica/<cpf>&<nis>
+    Uso: /faif/transparencia/pessoa-fisica/<cpf>/<nis>
     """
     cpf = sanitize_digits(cpf)
     nis = sanitize_digits(nis)
@@ -30,4 +29,5 @@ def buscar_pessoa_fisica(cpf: str, nis: str):
     )
 
     logger.info("[FAIFApi] buscar_pessoa_fisica cpf=%s nis=%s -> %s", cpf, nis, "OK" if dados else "EMPTY")
-    return jsonify(dados)
+
+    return jsonify({"ok": True, "data": dados})

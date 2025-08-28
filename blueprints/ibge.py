@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from utils.fetch import fetch_json, logger
-from utils.exceptions import InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound
 
 bp = Blueprint("ibge", __name__, url_prefix="/faif/ibge")
 
@@ -9,26 +8,21 @@ def buscar_ibge():
     """
     Busca dados do IBGE com base no termo de pesquisa fornecido.
     Uso: GET /faif/ibge?q=termo
-    Retorna: lista JSON (mesmo formato que o IBGE)
     """
     termo = (request.args.get("q") or "").strip()
     if not termo:
-        return jsonify([])
+        return jsonify({"ok": True, "data": []})
 
     url = "https://servicodados.ibge.gov.br/api/v2/metadados/Pesquisa"
     params = {"q": termo}
     logger.info("[FAIFApi] IBGE busca q=%s", termo)
 
-    try:
-        dados = fetch_json(
-            url,
-            params=params,
-            headers={"Accept": "application/json"},
-            not_found_message="Nenhum resultado IBGE.",
-            not_found_error_code="IBGE_NOT_FOUND",
-        )
+    dados = fetch_json(
+        url,
+        params=params,
+        headers={"Accept": "application/json"},
+        not_found_message="Nenhum resultado encontrado no IBGE.",
+        not_found_error_code="IBGE_NOT_FOUND",
+    )
 
-        return jsonify(dados)
-    except (InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound) as e:
-        logger.warning("[FAIFApi] Falha ao consultar IBGE q=%s: %s", termo, e)
-        return jsonify([])
+    return jsonify({"ok": True, "data": dados})

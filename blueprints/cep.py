@@ -20,4 +20,5 @@ def consultar_cep(cep: str):
         not_found_error_code="CEP_NOT_FOUND",
     )
     logger.info("[FAIFApi] consultar_cep(%s) -> %s", digits, "OK" if dados else "EMPTY")
-    return jsonify(dados)
+
+    return jsonify({"ok": True, "data": dados})
