@@ -4,12 +4,12 @@ from flask import Flask
 from flask_cors import CORS
 from werkzeug.exceptions import NotFound as HTTPNotFound
 
-import db as db_module
-from request_logger import init_request_logging
-from helpers import error_response_from_exception
-from exceptions import err, ErrorNotFound
+import utils.db as db_module
+from utils.request_logger import init_request_logging
+from utils.helpers import error_response_from_exception
+from utils.exceptions import err, ErrorNotFound
 from blueprints import register_blueprints
-from fetch import logger
+from utils.fetch import logger
 
 
 class Config:

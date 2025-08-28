@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, current_app
-from fetch import fetch_json
-from helpers import sanitize_digits
-from fetch import logger
+from utils.fetch import fetch_json
+from utils.helpers import sanitize_digits
+from utils.fetch import logger
 
 bp = Blueprint("cpf", __name__, url_prefix="/faif/transparencia/pessoa-fisica")
 

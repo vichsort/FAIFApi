@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from fetch import fetch_json, logger
-from exceptions import InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound
+from utils.fetch import fetch_json, logger
+from utils.exceptions import InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound
 
 bp = Blueprint("ibge", __name__, url_prefix="/faif/ibge")
 

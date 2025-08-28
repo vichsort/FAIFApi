@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
-from fetch import fetch_json, logger
-from helpers import sanitize_digits
+from utils.fetch import fetch_json, logger
+from utils.helpers import sanitize_digits
 from services.normalizers import map_cnpj_data
 
 bp = Blueprint("cnpj", __name__, url_prefix="/faif")

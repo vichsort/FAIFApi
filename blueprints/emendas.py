@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from flask import Blueprint, request, jsonify, current_app
-from fetch import fetch_json, logger
-from exceptions import InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound, err
+from utils.fetch import fetch_json, logger
+from utils.exceptions import InvalidJSON, ErrorUpstream, ConnectionErrorUpstream, ErrorNotFound, err
 
 bp = Blueprint("emendas", __name__, url_prefix="/faif/transparencia")
 
@@ -54,7 +54,7 @@ def buscar_emendas_parlamentares(page: str):
     if "nomeAutor" in params and isinstance(params["nomeAutor"], str):
         params["nomeAutor"] = params["nomeAutor"].upper()
 
-    url = "https://api.portaldatransparencia.gov.br/api-de-dados/emendas"
+    url = "https://api.portaldatransparencia.gov.br/api-de-dados/emendas?pagina=1"
     headers = {
         "Accept": "application/json",
         "chave-api-dados": current_app.config["TOKEN_PORTAL"],

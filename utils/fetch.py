@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-from exceptions import ConnectionErrorUpstream, ErrorNotFound, ErrorUpstream, InvalidJSON
+from utils.exceptions import ConnectionErrorUpstream, ErrorNotFound, ErrorUpstream, InvalidJSON
 import requests
 import logging
 import os

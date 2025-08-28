@@ -1,6 +1,6 @@
 import json
 from flask import request
-from db import get_connection
+from utils.db import get_connection
 
 def salvar_historico(endpoint: str, parametros: dict):
     """Salva informações de uma requisição no banco."""

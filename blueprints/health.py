@@ -6,7 +6,7 @@ import socket
 from datetime import datetime
 from flask import Blueprint, jsonify
 
-from db import get_connection, DB_PATH
+from utils.db import get_connection, DB_PATH
 
 bp = Blueprint("health", __name__)
 
