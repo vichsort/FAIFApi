@@ -1,17 +1,22 @@
-from flask import Flask
-from . import health, deputados, cep, cnpj
-from . import emendas, servicos, servidores, ibge
-
-
-def register_blueprints(app: Flask) -> None:
+def register_blueprints(app):
     """
-    Registra todos os blueprints do pacote blueprints.
+    Registra todos os blueprints da aplicação, importando-os localmente
+    para evitar dependências circulares durante a inicialização.
     """
-    app.register_blueprint(health.bp)
-    app.register_blueprint(deputados.bp)
+    from . import cep
+    from . import cnpj
+    from . import cpf
+    from . import deputados
+    from . import emendas
+    from . import ibge
+    from . import servicos
+    from . import servidores
+
     app.register_blueprint(cep.bp)
-    app.register_blueprint(cnpj.bp)  
-    app.register_blueprint(emendas.bp)  
-    app.register_blueprint(servicos.bp) 
-    app.register_blueprint(servidores.bp) 
+    app.register_blueprint(cnpj.bp)
+    app.register_blueprint(cpf.bp)
+    app.register_blueprint(deputados.bp)
+    app.register_blueprint(emendas.bp)
     app.register_blueprint(ibge.bp)
+    app.register_blueprint(servicos.bp)
+    app.register_blueprint(servidores.bp)
