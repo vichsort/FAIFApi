@@ -8,7 +8,7 @@ import utils.db as db_module
 from utils.request_logger import init_request_logging
 from utils.helpers import error_response_from_exception
 from utils.exceptions import err, ErrorNotFound
-from blueprints import register_blueprints
+from routes import register_blueprints
 from utils.fetch import logger
 
 
