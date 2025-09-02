@@ -1,21 +1,3 @@
-Beleza\! Agora sim, chegamos na fase de polimento final. O `README.md` é a porta de entrada do seu projeto. Ele precisa ser claro, completo e passar a seriedade e a qualidade que a sua API agora tem.
-
-Analisei o `README` que geramos antes. Ele tem uma boa base, mas depois de todas as nossas melhorias na arquitetura (PostgreSQL, `run.py`, `config.py`, migrations, `.env`), ele ficou **desatualizado e incompleto**.
-
-### Análise e Pontos de Melhoria
-
-1.  **Instruções de Instalação (`Como Começar`):** Estão erradas. O comando `python app.py` não funciona mais, e faltam os passos mais importantes: configurar as variáveis de ambiente (`.env`) e rodar as migrations do banco de dados (`flask db upgrade`). Sem isso, ninguém consegue rodar o projeto.
-2.  **Documentação de Endpoints:** Está incompleta. A rota de `/deputados` mudou para busca com query param (`?nome=...`) e agora temos a nova rota de detalhes por ID (`/deputados/<id>`). Isso precisa ser documentado.
-3.  **Profissionalismo:** Podemos adicionar "badges" (selos) no topo, uma seção de "Tecnologias Utilizadas" e uma seção de Licença para dar aquela "cara de seriedade" que você quer.
-4.  **Clareza:** O Índice (Table of Contents) estava com links quebrados na sua cópia. Vamos gerar um novo e funcional.
-
------
-
-### Versão Aprimorada do `README.md`
-
-Substitua todo o conteúdo do seu `README.md` por esta nova versão, que é muito mais completa e profissional.
-
-````markdown
 # FAIF - Facilitador de Acesso à Informação Federal
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
@@ -52,7 +34,7 @@ Siga os passos abaixo para configurar e executar o projeto localmente.
 
 1.  **Clone o repositório:**
 ```bash
-git clone [https://github.com/seu-usuario/FAIFApi.git](https://github.com/seu-usuario/FAIFApi.git)
+git clone [https://github.com/vichsort/FAIFApi.git](https://github.com/vichsort/FAIFApi.git)
 cd FAIFApi
 ```
 
