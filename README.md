@@ -34,7 +34,7 @@ Siga os passos abaixo para configurar e executar o projeto localmente.
 
 1.  **Clone o repositório:**
 ```bash
-git clone [https://github.com/vichsort/FAIFApi.git](https://github.com/vichsort/FAIFApi.git)
+git clone https://github.com/vichsort/FAIFApi.git
 cd FAIFApi
 ```
 

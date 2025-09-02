@@ -1,5 +1,5 @@
 # Ignora a pasta do ambiente virtual para não enviar todas as bibliotecas para o git.
-venv/
+venv/*
 .venv/
 
 # Ignora as pastas de cache que o Python cria.
