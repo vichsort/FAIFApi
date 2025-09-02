@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from flask import Blueprint, request, jsonify, current_app
-from utils.exceptions import err 
-from utils.fetch import fetch_json, logger
+from ..utils.exceptions import err 
+from ..utils.fetch import fetch_json, logger
 
 bp = Blueprint("emendas", __name__, url_prefix="/faif/transparencia")
 

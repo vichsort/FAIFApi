@@ -1,6 +1,6 @@
 from flask import jsonify
 from typing import Any
-from utils.exceptions import err
+from .exceptions import err
 
 # ---------------------------------------------------------------------------
 # Helpers e Respostas

@@ -1,8 +1,8 @@
 from typing import Dict
 from flask import Blueprint, request, current_app
-from utils.fetch import fetch_json, logger
-from utils.helpers import success_response
-from utils.exceptions import ErrorNotFound, err
+from ..utils.fetch import fetch_json, logger
+from ..utils.helpers import success_response
+from ..utils.exceptions import ErrorNotFound, err
 
 bp = Blueprint("servidores", __name__, url_prefix="/faif/transparencia")
 

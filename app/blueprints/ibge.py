@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils.fetch import fetch_json, logger
+from ..utils.fetch import fetch_json, logger
 
 bp = Blueprint("ibge", __name__, url_prefix="/faif/ibge")
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
-from utils.fetch import fetch_json
-from utils.helpers import sanitize_digits
-from utils.fetch import logger
+from ..utils.fetch import fetch_json
+from ..utils.helpers import sanitize_digits
+from ..utils.fetch import logger
 
 bp = Blueprint("cep", __name__, url_prefix="/faif/cep")
 

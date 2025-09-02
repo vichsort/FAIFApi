@@ -3,7 +3,7 @@ import time
 from typing import Any
 from flask import request, g, current_app
 
-from history import salvar_historico
+from FAIFApi.app.history import salvar_historico
 
 # Limites para truncamento - pra não ficar muito pesado
 MAX_STR_LEN = 1000        # máximo de caracteres para strings salvas

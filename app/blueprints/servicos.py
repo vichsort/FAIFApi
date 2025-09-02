@@ -1,6 +1,6 @@
 from flask import Blueprint
-from utils.fetch import fetch_json, logger
-from utils.helpers import success_response
+from ..utils.fetch import fetch_json, logger
+from ..utils.helpers import success_response
 
 bp = Blueprint("servicos", __name__, url_prefix="/faif/servicos")
 
