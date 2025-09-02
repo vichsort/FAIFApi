@@ -1,2 +1,22 @@
-venv
-*__pycache__
+# Ignora a pasta do ambiente virtual para não enviar todas as bibliotecas para o git.
+venv/
+.venv/
+
+# Ignora as pastas de cache que o Python cria.
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignora bancos de dados locais do SQLite que não devem ir para produção.
+*.db
+*.sqlite
+*.sqlite3
+
+.env
+.env.*
+!.env.example
+
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
