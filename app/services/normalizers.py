@@ -156,3 +156,42 @@ def normalize_public_list(dados_pub: Any) -> List[Dict[str, str]]:
                 }
             )
     return itens
+
+def normalize_deputado_details(raw: Any) -> Dict[str, Any]:
+    """
+    Normaliza a resposta de detalhes de um deputado da API da Câmara
+    para um objeto mais limpo e simples de usar.
+    """
+    if not isinstance(raw, dict):
+        return {}
+
+    status = raw.get("ultimoStatus", {})
+    gabinete = status.get("gabinete", {})
+
+    return {
+        "id": raw.get("id"),
+        "nomeCivil": raw.get("nomeCivil"),
+        "nomeEleitoral": status.get("nomeEleitoral"),
+        "cpf": raw.get("cpf"),
+        "sexo": raw.get("sexo"),
+        "dataNascimento": raw.get("dataNascimento"),
+        "ufNascimento": raw.get("ufNascimento"),
+        "municipioNascimento": raw.get("municipioNascimento"),
+        "escolaridade": raw.get("escolaridade"),
+        "situacao": status.get("situacao"),
+        "condicaoEleitoral": status.get("condicaoEleitoral"),
+        "partido": {
+            "sigla": status.get("siglaPartido"),
+            "uri": status.get("uriPartido"),
+        },
+        "gabinete": {
+            "andar": gabinete.get("andar"),
+            "email": gabinete.get("email"),
+            "nome": gabinete.get("nome"),
+            "predio": gabinete.get("predio"),
+            "sala": gabinete.get("sala"),
+            "telefone": gabinete.get("telefone"),
+        },
+        "urlFoto": status.get("urlFoto"),
+        "redesSociais": raw.get("redeSocial", [])
+    }
