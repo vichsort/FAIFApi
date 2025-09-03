@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
-from utils.fetch import fetch_json, logger
-from utils.exceptions import err
-from services.normalizers import normalize_deputados_list, normalize_deputado_details
+from ..utils.fetch import fetch_json, logger
+from ..utils.exceptions import err
+from ..services.normalizers import normalize_deputados_list, normalize_deputado_details
 
 bp = Blueprint("deputados", __name__, url_prefix="/faif/deputados")
 

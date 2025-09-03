@@ -1,5 +1,4 @@
 # FAIF - Facilitador de Acesso à Informação Federal
-
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.0-black.svg)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-orange.svg)
@@ -68,10 +67,10 @@ TOKEN_PORTAL="sua_chave_aqui"
 5.  **Configure o Banco de Dados:**
     * Primeiro, defina a variável de ambiente `FLASK_APP`:
         ```bash
-        # Windows (PowerShell)
-        $env:FLASK_APP = "app"
-        # Linux / macOS
-        export FLASK_APP=app
+          # Windows (PowerShell)
+          $env:FLASK_APP = "app"
+          # Linux / macOS
+          export FLASK_APP=app
         ```
     * Agora, rode o comando de "upgrade" do Flask-Migrate. Isso criará todas as tabelas no seu banco de dados PostgreSQL com base nos modelos definidos em `models.py`.
         ```bash
@@ -138,12 +137,6 @@ Retorna os dados detalhados de um deputado específico.
   * **Sucesso:** Retorna `{"ok": true, "data": {"id": 160976, "nomeCivil": "...", ...}}`
   * **Erro Comum:** `404 Not Found` se o ID não existir.
 
------
-
-*A documentação para os outros endpoints (CEP, CNPJ, etc.) segue o mesmo padrão detalhado anteriormente.*
-*Você pode colar o restante da documentação dos outros 8 endpoints aqui para completar.*
-
------
 
 ## 🏛️ Arquitetura
 
