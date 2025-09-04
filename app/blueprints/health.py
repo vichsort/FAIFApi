@@ -6,8 +6,6 @@ import socket
 from datetime import datetime
 from flask import Blueprint, jsonify
 
-from utils.db import get_connection, DB_PATH
-
 bp = Blueprint("health", __name__)
 
 def init_health(app, route="/health"):
@@ -64,27 +62,6 @@ def init_health(app, route="/health"):
         total_duration = app.config.get("TOTAL_DURATION_MS", 0)
         avg_duration = int(total_duration / total_requests) if total_requests > 0 else None
 
-        # DB info (tentativa segura)
-        db_info = {"path": None, "exists": False, "size_bytes": None, "historico_rows": None}
-        try:
-            db_path = DB_PATH  # importado do db.py
-            db_info["path"] = db_path
-            db_info["exists"] = os.path.exists(db_path)
-            if db_info["exists"]:
-                db_info["size_bytes"] = os.path.getsize(db_path)
-                # pega contagem de linhas na tabela historico (se existir)
-                conn = get_connection()
-                cur = conn.cursor()
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='historico'")
-                if cur.fetchone():
-                    cur.execute("SELECT COUNT(1) FROM historico")
-                    row = cur.fetchone()
-                    db_info["historico_rows"] = row[0] if row else 0
-                conn.close()
-        except Exception as e:
-            # não falha o health por causa do DB; registra a mensagem
-            db_info["error"] = str(e)
-
         payload = {
             "status": "ok",
             "uptime_seconds": round(uptime, 3),
@@ -99,7 +76,6 @@ def init_health(app, route="/health"):
                 "failed_requests": failed_requests,
                 "avg_duration_ms": avg_duration,
             },
-            "db": db_info,
             "env": {"TOKEN_PORTAL_present": bool(os.getenv("TOKEN_PORTAL"))},
             "timestamp": datetime.utcfromtimestamp(now).isoformat() + "Z",
         }

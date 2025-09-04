@@ -58,7 +58,7 @@ def buscar_emendas_parlamentares(page: str):
     }
 
     logger.info("[FAIFApi] Emendas params=%s", params)
-    
+
     dados = fetch_json(
         url,
         headers=headers,
@@ -66,7 +66,7 @@ def buscar_emendas_parlamentares(page: str):
         not_found_message="Nenhuma emenda encontrada.",
         not_found_error_code="EMENDA_NOT_FOUND",
     )
-
+    
     logger.info("[FAIFApi] Resposta da API externa (emendas) -> %s", "OK" if dados else "EMPTY")
 
     return jsonify({"ok": True, "data": dados or []})

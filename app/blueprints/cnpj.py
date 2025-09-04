@@ -5,7 +5,7 @@ from ..services.normalizers import map_cnpj_data
 
 bp = Blueprint("cnpj", __name__, url_prefix="/faif")
 
-@bp.route("/cnpj/<path:cnpj>", methods=["GET"])
+@bp.route("/cnpj/<cnpj>", methods=["GET"])
 def consultar_cnpj(cnpj: str):
     digits = sanitize_digits(cnpj)
     url = f"https://brasilapi.com.br/api/cnpj/v1/{digits}"

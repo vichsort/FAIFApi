@@ -10,3 +10,5 @@ class Config:
         "postgresql+psycopg://postgres:ifc@localhost:5432/faif"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    TOKEN_PORTAL = os.getenv("TOKEN_PORTAL", "d1b5fac8951a331b63047753f1eaa2fb")
