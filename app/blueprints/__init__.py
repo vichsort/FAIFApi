@@ -11,6 +11,7 @@ def register_blueprints(app):
     from . import ibge
     from . import servicos
     from . import servidores
+    from . import historico
 
     app.register_blueprint(cep.bp)
     app.register_blueprint(cnpj.bp)
@@ -20,3 +21,4 @@ def register_blueprints(app):
     app.register_blueprint(ibge.bp)
     app.register_blueprint(servicos.bp)
     app.register_blueprint(servidores.bp)
+    app.register_blueprint(historico.bp)
